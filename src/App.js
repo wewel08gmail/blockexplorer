@@ -1,36 +1,76 @@
-import { Alchemy, Network } from 'alchemy-sdk';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import { ChakraProvider, Flex, Box } from "@chakra-ui/react";
 
-import './App.css';
+import { Alchemy, Network } from "alchemy-sdk";
 
-// Refer to the README doc for more information about using API
-// keys in client-side code. You should never do this in production
-// level code.
+import {
+  LatestBlocks,
+  BlockDetail,
+  TransactionList,
+  TransactionDetail,
+} from "./components";
+
 const settings = {
   apiKey: process.env.REACT_APP_ALCHEMY_API_KEY,
   network: Network.ETH_MAINNET,
 };
-
-
-// In this week's lessons we used ethers.js. Here we are using the
-// Alchemy SDK is an umbrella library with several different packages.
-//
-// You can read more about the packages here:
-//   https://docs.alchemy.com/reference/alchemy-sdk-api-surface-overview#api-surface
 const alchemy = new Alchemy(settings);
 
+const NUM_OF_LATEST_BLOCKS = 10;
+
 function App() {
-  const [blockNumber, setBlockNumber] = useState();
+  const [latestBlockNumber, setLatestBlockNumber] = useState();
+  const [blockDetail, setBlockDetail] = useState();
+  const [txDetail, setTxDetail] = useState();
+
+  const refreshLatestBlockNumber = async () => {
+    const res = await alchemy.core.getBlockNumber();
+    setLatestBlockNumber(res);
+  };
 
   useEffect(() => {
-    async function getBlockNumber() {
-      setBlockNumber(await alchemy.core.getBlockNumber());
-    }
+    refreshLatestBlockNumber();
+  }, []);
 
-    getBlockNumber();
-  });
+  const onSelectBlock = async (blockNumber) => {
+    const res = await alchemy.core.getBlock(blockNumber);
+    setBlockDetail(res);
+  };
 
-  return <div className="App">Block Number: {blockNumber}</div>;
+  const onSelectTransaction = async (tx) => {
+    const res = await alchemy.core.getTransactionReceipt(tx);
+    setTxDetail(res);
+  };
+
+  return (
+    <ChakraProvider>
+      <Flex direction="column">
+        <Flex direction="row">
+          <Box w="35%">
+            <LatestBlocks
+              latestBlockNumber={latestBlockNumber}
+              numOfBlock={NUM_OF_LATEST_BLOCKS}
+              onSelectBlock={onSelectBlock}
+            />
+          </Box>
+          <Box w="50%">
+            <BlockDetail data={blockDetail} />
+          </Box>
+        </Flex>
+        <Flex direction="row">
+          <Box w="35%">
+            <TransactionList
+              transactions={blockDetail?.transactions}
+              onSelectTransaction={onSelectTransaction}
+            />
+          </Box>
+          <Box w="50%">
+            <TransactionDetail transaction={txDetail} />
+          </Box>
+        </Flex>
+      </Flex>
+    </ChakraProvider>
+  );
 }
 
 export default App;
